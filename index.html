@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Işık Avcısı: Fotosentez Görevi</title>
+<style>
+body { margin:0; font-family:'Poppins',sans-serif; background:linear-gradient(to bottom,#c2f970,#6ac759); overflow:hidden; }
+#gameContainer{position:relative;width:100%;height:100vh;overflow:hidden;}
+#player{position:absolute;bottom:20px;width:80px;height:80px;display:none;}
+.light, .joker{position:absolute;top:0;width:40px;height:40px;border-radius:50%;}
+.light{background:yellow;box-shadow:0 0 15px yellow;}
+.joker{background:gold;box-shadow:0 0 25px gold;border:2px solid orange;}
+#sunBar{position:absolute;top:10px;left:10px;width:250px;height:25px;background:rgba(255,255,255,0.3);border-radius:15px;overflow:hidden;}
+#sunBarFill{width:100%;height:100%;background:linear-gradient(to right,gold,orange);transition:width 0.2s;}
+#stats{position:absolute;top:10px;right:10px;font-size:18px;font-weight:bold;color:#2d2d2d;display:none;}
+#hearts{position:absolute;top:45px;right:10px;font-size:25px;display:none;}
+#message{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:24px;color:white;background:rgba(0,0,0,0.7);padding:20px 30px;border-radius:15px;display:none;}
+#startBtn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);padding:20px 40px;font-size:24px;border:none;border-radius:15px;background-color:#ffcc00;cursor:pointer;box-shadow:0 4px 0 #cc9900;}
+#startBtn:active{top:calc(50% + 4px);box-shadow:none;}
+</style>
+<link rel="icon" href="koloro.png" type="image/x-icon" />
+</head>
+<body>
+
+<div id="gameContainer">
+  <div id="sunBar"><div id="sunBarFill"></div></div>
+  <div id="stats">ATP: 0 | NADPH: 0</div>
+  <div id="hearts">❤️❤️❤️</div>
+  <img id="player" src="koloro.png" alt="Kloroplast">
+  <div id="message"></div>
+  <button id="startBtn">Oyuna Başla</button>
+</div>
+
+<script>
+const container = document.getElementById("gameContainer");
+const player = document.getElementById("player");
+const stats = document.getElementById("stats");
+const heartsEl = document.getElementById("hearts");
+const sunBarFill = document.getElementById("sunBarFill");
+const message = document.getElementById("message");
+const startBtn = document.getElementById("startBtn");
+
+let atp = 0, nadph = 0;
+let lives = 3;
+let sunPower = 100; // % olarak
+let gameOver = false;
+let gameInterval;
+
+startBtn.addEventListener("click", startGame);
+
+document.addEventListener("mousemove", e => {
+  if(player.style.display === "block"){
+    const x = e.clientX - player.offsetWidth/2;
+    player.style.left = Math.max(0, Math.min(container.offsetWidth - player.offsetWidth, x)) + "px";
+  }
+});
+
+function createLight() {
+  if (gameOver) return;
+  const div = document.createElement("div");
+  const isJoker = Math.random() < 0.05;
+  div.className = isJoker ? "joker" : "light";
+  div.style.left = Math.random()*(container.offsetWidth-40) + "px";
+  container.appendChild(div);
+
+  let fall = setInterval(() => {
+    const top = parseFloat(div.style.top || 0);
+    div.style.top = top + 5 + "px";
+
+    const playerRect = player.getBoundingClientRect();
+    const lightRect = div.getBoundingClientRect();
+
+    if(lightRect.bottom >= playerRect.top &&
+       lightRect.left < playerRect.right &&
+       lightRect.right > playerRect.left){
+      container.removeChild(div);
+      clearInterval(fall);
+      if(isJoker){
+        sunPower = Math.min(100, sunPower+5);
+        showTempMessage("🌟 Ekstra Güneş Enerjisi +5%");
+      } else {
+        atp++;
+        nadph++;
+      }
+      updateStats();
+    } else if(top > container.offsetHeight){
+      container.removeChild(div);
+      clearInterval(fall);
+      if(!isJoker) missLight();
+    }
+  }, 30);
+}
+
+function missLight(){
+  lives--;
+  updateHearts();
+  if(lives <= 0) endGame();
+}
+
+function updateStats(){
+  stats.textContent = `ATP: ${atp} | NADPH: ${nadph}`;
+}
+
+function updateHearts(){
+  heartsEl.textContent = "❤️".repeat(lives) + "🩶".repeat(3-lives);
+}
+
+function showTempMessage(txt){
+  message.textContent = txt;
+  message.style.display = "block";
+  setTimeout(()=>message.style.display="none",1000);
+}
+
+function updateSun(){
+  sunPower -= 100/150; // 15 saniyede 0 olacak
+  if(sunPower <= 0){
+    sunPower = 0;
+    endGame();
+  }
+  sunBarFill.style.width = sunPower+"%";
+}
+
+function startGame(){
+  startBtn.style.display = "none";
+  player.style.display = "block";
+  stats.style.display = "block";
+  heartsEl.style.display = "block";
+
+  gameInterval = setInterval(()=>{
+    createLight();
+    updateSun();
+  },500);
+}
+
+function endGame(){
+  if(gameOver) return;
+  gameOver = true;
+  clearInterval(gameInterval);
+  localStorage.setItem("atp", atp);
+  localStorage.setItem("nadph", nadph);
+  window.location = "calvin.html";
+}
+</script>
+
+</body>
+</html>

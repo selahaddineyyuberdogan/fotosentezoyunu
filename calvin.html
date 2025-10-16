@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <link rel="icon" href="koloro.png" type="image/x-icon" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calvin Döngüsü Oyunu Bölümü</title>
+<style>
+body {
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  background: linear-gradient(to bottom, #8fcf7f, #397d2a);
+  overflow:hidden;
+}
+#gameContainer {
+  width:100%;
+  height:100vh;
+  position:relative;
+}
+#player {
+  position:absolute;
+  bottom:20px;
+  width:100px;
+  height:100px;
+  left:50%;
+  transform:translateX(-50%);
+}
+.co2 {
+  position:absolute;
+  width:50px;
+  height:50px;
+  top:0;
+}
+#stats {
+  position:absolute;
+  top:10px;
+  left:10px;
+  font-size:20px;
+  color:white;
+}
+#o2Produced {
+  position:absolute;
+  top:40px;
+  left:10px;
+  font-size:20px;
+  color:white;
+}
+#message {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:24px;
+  color:white;
+  background:rgba(0,0,0,0.6);
+  padding:15px 25px;
+  border-radius:15px;
+  display:none;
+}
+</style>
+</head>
+<body>
+
+<div id="gameContainer">
+  <img id="player" src="koloro.png" alt="Kloroplast">
+  <div id="stats">ATP: 0 | NADPH: 0</div>
+  <div id="o2Produced">O₂ Üretildi: 0</div>
+  <div id="message"></div>
+</div>
+
+<script>
+const container = document.getElementById("gameContainer");
+const player = document.getElementById("player");
+const statsEl = document.getElementById("stats");
+const o2El = document.getElementById("o2Produced");
+const message = document.getElementById("message");
+
+let atp = parseInt(localStorage.getItem("atp")) || 0;
+let nadph = parseInt(localStorage.getItem("nadph")) || 0;
+let o2Produced = 0;
+let co2s = [];
+let gameOver = false;
+
+// Hareket
+document.addEventListener("mousemove", e => {
+  const x = e.clientX - player.offsetWidth/2;
+  player.style.left = Math.max(0, Math.min(container.offsetWidth - player.offsetWidth, x)) + "px";
+});
+
+// CO₂ oluştur
+function spawnCO2() {
+  if(gameOver) return;
+  if(atp <= 0 || nadph <=0) return; // ATP/NADPH bitince yeni CO₂ çıkmasın
+
+  const div = document.createElement("img");
+  div.src = "co2.png"; // artık resim
+  div.className = "co2";
+  div.style.left = Math.random()*(container.offsetWidth-50) + "px";
+  container.appendChild(div);
+  co2s.push(div);
+}
+
+// Oyun döngüsü
+function gameLoop() {
+  if(gameOver) return;
+  co2s.forEach((c,index)=>{
+    const top = parseFloat(c.style.top || 0);
+    c.style.top = top + 3 + "px";
+
+    const cRect = c.getBoundingClientRect();
+    const pRect = player.getBoundingClientRect();
+
+    // Karakterin dışındaki CO₂’yi yok et
+    if(cRect.bottom > container.getBoundingClientRect().bottom){
+      container.removeChild(c);
+      co2s.splice(index,1);
+      return;
+    }
+
+    // Yakalama kontrolü
+    if(cRect.bottom >= pRect.top &&
+       cRect.left < pRect.right &&
+       cRect.right > pRect.left){
+      if(atp > 0 && nadph > 0){
+        container.removeChild(c);
+        co2s.splice(index,1);
+        atp--;
+        nadph--;
+        o2Produced += 2; // her CO₂ yakalanınca O₂
+        statsEl.textContent = `ATP: ${atp} | NADPH: ${nadph}`;
+        o2El.textContent = `O₂ Üretildi: ${o2Produced}`;
+      }
+    }
+  });
+
+  // ATP/NADPH bitince oyun bitir
+  if(atp <= 0 && nadph <= 0){
+    endGame();
+  } else {
+    requestAnimationFrame(gameLoop);
+  }
+}
+
+function endGame(){
+  if(gameOver) return;
+  gameOver = true;
+  message.style.display="block";
+  message.textContent = `🎉 Calvin Döngüsü Tamamlandı!\nToplam O₂ Üretimi: ${o2Produced}
+  
+  Hazırlayanlar: 
+  Selahaddin Eyyub Erdoğan
+  Ataberk Araz
+  Muhammed Ali Akkoyun
+  Ceyhun Eren Yıldırım`;
+}
+
+// Başlat
+setInterval(spawnCO2, 800); // her 0.8 saniye bir CO₂
+gameLoop();
+</script>
+
+</body>
+</html>
